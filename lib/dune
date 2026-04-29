@@ -1,3 +1,4 @@
 (library
  (name fs)
- (modules Fs Path))
+ (modules Fs Path)
+ (wrapped false))

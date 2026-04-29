@@ -1,0 +1,25 @@
+# Dune build artifacts
+_build/
+.dune/
+.dune-cache/
+
+# OCaml compiled artifacts
+*.cm* 
+*.o
+*.a
+*.so
+*.exe
+*.byte
+*.native
+
+# Merlin
+.merlin
+
+# Editor/OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

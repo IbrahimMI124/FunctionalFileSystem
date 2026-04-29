@@ -5,7 +5,6 @@ Minimal prototype for a purely functional, immutable virtual file system.
 ## Build
 
 ```bash
-cd fs-project
 dune build
 ```
 
