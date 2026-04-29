@@ -89,3 +89,43 @@ let read (fs : t) (path : string list) : string option =
       let _ = f.meta.created + f.meta.modified in
       Some f.content
   | _ -> None
+
+let delete (fs : t) (path : string list) : t =
+  let dir_path, name = split_last path in
+  update fs dir_path (fun node ->
+      let d = as_dir node in
+      match StringMap.find_opt name d.entries with
+      | None -> failwith "delete: path not found"
+      | Some _ -> Dir { d with entries = StringMap.remove name d.entries })
+
+let ls (fs : t) (path : string list) : string list =
+  match find_node fs path with
+  | Some (Dir d) ->
+      StringMap.bindings d.entries |> List.map (fun (name, _) -> name)
+  | Some (File _) -> failwith "ls: not a directory"
+  | None -> failwith "ls: path not found"
+
+let mv (fs : t) (src : string list) (dst : string list) : t =
+  let src_node =
+    match find_node fs src with
+    | None -> failwith "mv: source not found"
+    | Some n -> n
+  in
+  let fs' = delete fs src in
+  let dir_path, name = split_last dst in
+  update fs' dir_path (fun dir_node ->
+      let d = as_dir dir_node in
+      if StringMap.mem name d.entries then failwith "mv: target exists";
+      Dir { d with entries = StringMap.add name src_node d.entries })
+
+let cp (fs : t) (src : string list) (dst : string list) : t =
+  let src_node =
+    match find_node fs src with
+    | None -> failwith "cp: source not found"
+    | Some n -> n
+  in
+  let dir_path, name = split_last dst in
+  update fs dir_path (fun dir_node ->
+      let d = as_dir dir_node in
+      if StringMap.mem name d.entries then failwith "cp: target exists";
+      Dir { d with entries = StringMap.add name src_node d.entries })

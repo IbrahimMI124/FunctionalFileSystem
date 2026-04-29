@@ -40,4 +40,24 @@ let () =
       false
     with Failure _ -> true
   in
-  assert touch_failed
+  assert touch_failed;
+
+  (* ls lists directory entries (sorted by name) *)
+  let fs5_0 = Fs.mkdir Fs.empty [ "d" ] in
+  let fs5_1 = Fs.touch fs5_0 [ "d"; "b.txt" ] "b" in
+  let fs5 = Fs.touch fs5_1 [ "d"; "a.txt" ] "a" in
+  assert (Fs.ls fs5 [ "d" ] = [ "a.txt"; "b.txt" ]);
+
+  (* cp copies a node without removing source *)
+  let fs6 = Fs.cp fs5 [ "d"; "a.txt" ] [ "d"; "c.txt" ] in
+  assert (Fs.read fs6 [ "d"; "a.txt" ] = Some "a");
+  assert (Fs.read fs6 [ "d"; "c.txt" ] = Some "a");
+
+  (* mv moves a node and removes source *)
+  let fs7 = Fs.mv fs6 [ "d"; "b.txt" ] [ "d"; "b2.txt" ] in
+  assert (Fs.read fs7 [ "d"; "b.txt" ] = None);
+  assert (Fs.read fs7 [ "d"; "b2.txt" ] = Some "b");
+
+  (* delete removes a node *)
+  let fs8 = Fs.delete fs7 [ "d"; "a.txt" ] in
+  assert (Fs.read fs8 [ "d"; "a.txt" ] = None)
