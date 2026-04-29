@@ -60,4 +60,44 @@ let () =
 
   (* delete removes a node *)
   let fs8 = Fs.delete fs7 [ "d"; "a.txt" ] in
-  assert (Fs.read fs8 [ "d"; "a.txt" ] = None)
+  assert (Fs.read fs8 [ "d"; "a.txt" ] = None);
+
+  (* persistence stress test: prior versions unchanged *)
+  let fs0 = Fs.empty in
+  let fs1_p = Fs.mkdir fs0 [ "p" ] in
+  let fs2_p = Fs.touch fs1_p [ "p"; "f.txt" ] "v" in
+  let fs3_p = Fs.delete fs2_p [ "p"; "f.txt" ] in
+  assert (Fs.read fs1_p [ "p"; "f.txt" ] = None);
+  assert (Fs.read fs2_p [ "p"; "f.txt" ] = Some "v");
+  assert (Fs.read fs3_p [ "p"; "f.txt" ] = None);
+
+  (* deep path test: 100 nested directories *)
+  let rec make_deep n acc =
+    if n = 0 then acc else make_deep (n - 1) (acc @ [ "d" ^ string_of_int n ])
+  in
+  let deep_path = make_deep 100 [] in
+  let fs_deep = Fs.mkdir Fs.empty deep_path in
+  let file_path = deep_path @ [ "leaf.txt" ] in
+  let fs_deep2 = Fs.touch fs_deep file_path "deep" in
+  assert (Fs.read fs_deep2 file_path = Some "deep");
+
+  (* copy directory test: copy subtree *)
+  let fs_sub0 = Fs.mkdir Fs.empty [ "src" ] in
+  let fs_sub1 = Fs.mkdir fs_sub0 [ "src"; "inner" ] in
+  let fs_sub2 = Fs.touch fs_sub1 [ "src"; "inner"; "note.txt" ] "n" in
+  let fs_sub3 = Fs.cp fs_sub2 [ "src" ] [ "dst" ] in
+  assert (Fs.read fs_sub3 [ "src"; "inner"; "note.txt" ] = Some "n");
+  assert (Fs.read fs_sub3 [ "dst"; "inner"; "note.txt" ] = Some "n");
+
+  (* history layer tests *)
+  let repo0 = History.init Fs.empty in
+  let repo1 = History.commit { repo0 with working = Fs.mkdir Fs.empty [ "h" ] } "mkdir h" in
+  let repo2 = History.commit { repo1 with working = Fs.touch (History.latest repo1) [ "h"; "x" ] "1" } "add x" in
+  let repo2_checked = History.checkout repo2 1 in
+  assert (Fs.read (History.latest repo2) [ "h"; "x" ] = Some "1");
+  assert (Fs.read (History.latest repo2_checked) [ "h"; "x" ] = None);
+  let log_ids =
+    History.log repo2
+    |> List.map (fun (c : History.commit) -> c.id)
+  in
+  assert (log_ids = [ 2; 1; 0 ])
