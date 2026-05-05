@@ -126,15 +126,145 @@ Imperative:  fs2 := Fs.touch !fs1 ...     (* deep_copy inside touch protects !fs
 
 ```bash
 # From the imperative/ directory:
-opam exec -- dune build       # compile everything
-opam exec -- dune test        # run the test suite (all assertions must pass)
-opam exec -- dune exec bin/main.exe   # run the demo
+opam exec -- dune build               # compile everything
+opam exec -- dune test                # run the test suite
+opam exec -- dune exec bin/main.exe   # run the full usage demo
 ```
 
-Expected output of the demo:
+---
+
+## How to Use (Normal User Guide)
+
+Everything lives in three modules: **`Path`**, **`Fs`**, and **`History`**.
+You write your own code in `bin/main.ml` (or add a new executable) and call their functions.
+
+### Step 1 — Parse Paths
+
+```ocaml
+(* Turn a Unix path string into a list of segments *)
+let p = Path.of_string "/home/user/docs/report.txt"
+(* p = ["home"; "user"; "docs"; "report.txt"] *)
+
+(* Turn it back into a string *)
+let s = Path.to_string p        (* "/home/user/docs/report.txt" *)
+let r = Path.to_string []       (* "/" — the root *)
 ```
-Hello from an imperative FS!
+
+You can also just write path lists directly: `["docs"; "report.txt"]`.
+
+---
+
+### Step 2 — Create Directories and Files
+
+```ocaml
+(* Always start from Fs.empty *)
+let fs = ref Fs.empty
+
+(* mkdir: creates the directory and any missing parents *)
+fs := Fs.mkdir !fs ["home"; "user"; "docs"]
+
+(* touch: create a new file (or overwrite if it already exists) *)
+fs := Fs.touch !fs ["home"; "user"; "docs"; "report.txt"] "Hello, world!"
+fs := Fs.touch !fs ["home"; "user"; "docs"; "notes.txt"]  "My notes."
 ```
+
+---
+
+### Step 3 — Read and List
+
+```ocaml
+(* read: returns Some "content" for a file, or None for missing/directory *)
+match Fs.read !fs ["home"; "user"; "docs"; "report.txt"] with
+| Some content -> print_endline content   (* "Hello, world!" *)
+| None         -> print_endline "not found"
+
+(* ls: lists entries in a directory, always sorted alphabetically *)
+let entries = Fs.ls !fs ["home"; "user"; "docs"]
+(* entries = ["notes.txt"; "report.txt"] *)
+```
+
+---
+
+### Step 4 — Copy, Move, Delete
+
+```ocaml
+(* cp: copies a file or whole directory subtree; source stays *)
+fs := Fs.cp !fs ["home"; "user"; "docs"; "report.txt"]
+                ["home"; "user"; "docs"; "report_backup.txt"]
+
+(* mv: moves a node; source is removed *)
+fs := Fs.mv !fs ["home"; "user"; "docs"; "notes.txt"]
+                ["home"; "user"; "notes_archive.txt"]
+
+(* delete: removes a file or directory *)
+fs := Fs.delete !fs ["home"; "user"; "docs"; "report_backup.txt"]
+```
+
+---
+
+### Step 5 — Snapshots (Old Values Stay Safe)
+
+Every operation returns a **brand-new snapshot**. Storing the old value in a
+separate variable gives you a free "undo" — the old snapshot is unaffected.
+
+```ocaml
+let snap1 = Fs.touch Fs.empty ["file.txt"] "v1"
+let snap2 = Fs.touch snap1    ["file.txt"] "v2"   (* snap1 still has "v1" *)
+let snap3 = Fs.delete snap2   ["file.txt"]         (* snap2 still has "v2" *)
+
+Fs.read snap1 ["file.txt"]   (* Some "v1" *)
+Fs.read snap2 ["file.txt"]   (* Some "v2" *)
+Fs.read snap3 ["file.txt"]   (* None      *)
+```
+
+---
+
+### Step 6 — History (Commits and Checkout)
+
+Use `History` when you want named, numbered snapshots you can jump between —
+like a very small Git.
+
+```ocaml
+(* Wrap any filesystem in a repo *)
+let repo = ref (History.init Fs.empty)
+
+(* Make changes, then commit *)
+let fs1 = Fs.mkdir Fs.empty ["projects"]
+repo := History.commit { !repo with working = fs1 } "create /projects"
+
+let fs2 = Fs.touch (History.latest !repo) ["projects"; "todo.txt"] "Buy milk"
+repo := History.commit { !repo with working = fs2 } "add todo.txt"
+
+(* See what's in the working filesystem right now *)
+Fs.read (History.latest !repo) ["projects"; "todo.txt"]   (* Some "Buy milk" *)
+
+(* Print the commit log (newest first) *)
+List.iter (fun (c : History.commit) ->
+  Printf.printf "[%d] %s\n" c.id c.message
+) (History.log !repo)
+(* [2] add todo.txt
+   [1] create /projects
+   [0] init              *)
+
+(* Go back to an earlier commit by ID *)
+let old = History.checkout !repo 1
+Fs.read (History.latest old) ["projects"; "todo.txt"]   (* None — file didn't exist yet *)
+
+(* !repo itself is unaffected — checkout does NOT mutate the original *)
+Fs.read (History.latest !repo) ["projects"; "todo.txt"]  (* Some "Buy milk" *)
+```
+
+---
+
+### Running Your Code
+
+Edit `bin/main.ml` with your own calls, then:
+
+```bash
+opam exec -- dune exec bin/main.exe
+```
+
+The file `bin/main.ml` already contains a full working demo of every operation above.
 
 ---
 
