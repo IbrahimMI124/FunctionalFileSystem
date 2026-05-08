@@ -1,0 +1,9 @@
+(executable
+ (name bench_functional)
+ (modules bench_functional)
+ (libraries fs unix))
+
+(executable
+ (name bench_imperative)
+ (modules bench_imperative)
+ (libraries fs_imp unix))
