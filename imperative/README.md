@@ -8,7 +8,6 @@ An **imperative-style** re-implementation of the same in-memory filesystem origi
 
 ```
 imperative/
-├── dune-project
 ├── lib/
 │   ├── path.ml / path.mli      # Path string utilities
 │   ├── fs.ml  / fs.mli         # Core filesystem (mutable tree)
@@ -16,7 +15,7 @@ imperative/
 ├── bin/
 │   └── main.ml                 # Demo entry point
 └── test/
-    └── fs_test.ml              # Full test suite
+  └── fs_test.ml              # Full test suite
 ```
 
 ---
@@ -122,13 +121,13 @@ Imperative:  fs2 := Fs.touch !fs1 ...     (* deep_copy inside touch protects !fs
 
 ---
 
-## Building & Running
+## Building & Running (Single Project)
 
 ```bash
-# From the imperative/ directory:
-opam exec -- dune build               # compile everything
-opam exec -- dune test                # run the test suite
-opam exec -- dune exec bin/main.exe   # run the full usage demo
+# From the repo root:
+dune build
+dune test imperative/test
+dune exec imperative/bin/main.exe
 ```
 
 ---

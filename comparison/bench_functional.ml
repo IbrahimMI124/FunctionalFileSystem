@@ -95,7 +95,7 @@ let build_base () : state =
 
 (* Run a fixed mix of operations on a single filesystem value. *)
 let run_throughput () : unit =
-  let ops = 5000 in
+  let ops = 20000 in
   let state_ref = ref (build_base ()) in
   for i = 1 to ops do
     let s = !state_ref in
@@ -143,7 +143,7 @@ let run_throughput () : unit =
 
 (* Repeated small edits + commits + reads from older snapshots. *)
 let run_commit_loop () : unit =
-  let commit_count = 300 in
+  let commit_count = 2000 in
   let fs0 = Fs.mkdir Fs.empty [ "data" ] in
   let repo_ref = ref (History.init fs0) in
   for i = 1 to commit_count do

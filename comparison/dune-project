@@ -1,3 +1,0 @@
-(lang dune 3.10)
-(name fs_compare)
-(generate_opam_files false)

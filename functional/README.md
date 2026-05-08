@@ -6,7 +6,6 @@ Purely functional, persistent in-memory filesystem with structural sharing.
 
 ```
 functional/
-├── dune-project
 ├── bin/          # Demo executable
 ├── lib/          # Core implementation (Fs/Path/History)
 └── test/         # Test suite
@@ -18,13 +17,13 @@ functional/
 - `Fs`: immutable filesystem operations with persistence.
 - `History`: snapshot history and commit log.
 
-## Build, Run, Test
+## Build, Run, Test (Single Project)
 
 ```bash
-# From the functional/ directory:
+# From the repo root:
 dune build
-dune exec ./bin/main.exe
-dune test
+dune exec functional/bin/main.exe
+dune test functional/test
 ```
 
 ## Notes
