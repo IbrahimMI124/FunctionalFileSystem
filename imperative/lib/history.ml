@@ -27,6 +27,7 @@ type commit = {
 (* history is kept opaque in the .mli; internally it is mutable. *)
 type history = {
   mutable head    : snapshot_id;
+  mutable latest_head : snapshot_id;
   commits         : (snapshot_id, commit) Hashtbl.t;   (* shared, append-only *)
   mutable next_id : int;
 }
@@ -46,6 +47,7 @@ type repo = {
    all stored commits are immutable records. *)
 let copy_history (h : history) : history =
   { head    = h.head;
+    latest_head = h.latest_head;
     commits = h.commits;          (* shared reference — safe, append-only *)
     next_id = h.next_id }
 
@@ -59,7 +61,7 @@ let init (fs : Fs.t) : repo =
   let c0 = { id = 0; parent = None; fs = fs_snapshot; message = "init"; time = 0 } in
   let tbl = Hashtbl.create 16 in
   Hashtbl.add tbl 0 c0;
-  let h = { head = 0; commits = tbl; next_id = 1 } in
+  let h = { head = 0; latest_head = 0; commits = tbl; next_id = 1 } in
   { working = fs; history = h }
 
 (* commit — record a new snapshot and advance HEAD imperatively.
@@ -76,6 +78,7 @@ let commit (r : repo) (message : string) : repo =
               time    = 0 } in
   Hashtbl.replace h.commits id c;           (* mutate the copy *)
   h.head    <- id;
+  h.latest_head <- id;
   h.next_id <- id + 1;
   { working = r.working; history = h }
 
@@ -91,6 +94,17 @@ let checkout (r : repo) (id : snapshot_id) : repo =
 
 (* latest — return the working filesystem snapshot. *)
 let latest (r : repo) : Fs.t = r.working
+
+let checkout_latest (r : repo) : repo =
+  match Hashtbl.find_opt r.history.commits r.history.latest_head with
+  | None -> r
+  | Some c ->
+      let h = copy_history r.history in
+      h.head <- r.history.latest_head;
+      { working = Fs.snapshot c.fs; history = h }
+
+let latest_head (r : repo) : snapshot_id =
+  r.history.latest_head
 
 (* log — walk the parent chain from HEAD using a while loop.
          Walking HEAD (newest) -> root (oldest) while prepending
