@@ -55,7 +55,8 @@ let copy_history (h : history) : history =
 
 (* init — create a repository with a single initial commit. *)
 let init (fs : Fs.t) : repo =
-  let c0 = { id = 0; parent = None; fs; message = "init"; time = 0 } in
+  let fs_snapshot = Fs.snapshot fs in
+  let c0 = { id = 0; parent = None; fs = fs_snapshot; message = "init"; time = 0 } in
   let tbl = Hashtbl.create 16 in
   Hashtbl.add tbl 0 c0;
   let h = { head = 0; commits = tbl; next_id = 1 } in
@@ -67,9 +68,10 @@ let init (fs : Fs.t) : repo =
 let commit (r : repo) (message : string) : repo =
   let h  = copy_history r.history in        (* independent copy *)
   let id = h.next_id in
+  let fs_snapshot = Fs.snapshot r.working in
   let c  = { id;
               parent  = Some h.head;
-              fs      = r.working;
+              fs      = fs_snapshot;
               message;
               time    = 0 } in
   Hashtbl.replace h.commits id c;           (* mutate the copy *)
@@ -82,10 +84,10 @@ let commit (r : repo) (message : string) : repo =
 let checkout (r : repo) (id : snapshot_id) : repo =
   match Hashtbl.find_opt r.history.commits id with
   | None   -> failwith "checkout: commit not found"
-  | Some c ->
+    | Some c ->
       let h = copy_history r.history in
       h.head <- id;
-      { working = c.fs; history = h }
+      { working = Fs.snapshot c.fs; history = h }
 
 (* latest — return the working filesystem snapshot. *)
 let latest (r : repo) : Fs.t = r.working

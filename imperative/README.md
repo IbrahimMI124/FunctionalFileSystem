@@ -110,14 +110,18 @@ The commit store is a `Hashtbl` keyed by integer ID. `head` and `next_id` are mu
 
 ---
 
-## Key Design Decision: Snapshot Isolation
+## Key Design Decision: Explicit Snapshots
 
-The functional version gets snapshot isolation *for free* via immutable persistent maps (structural sharing). The imperative version must **explicitly deep-copy** the filesystem tree on every write operation to achieve the same guarantee — earlier `t` values remain valid and unchanged after any subsequent operation.
+The imperative version now **mutates in place** for normal writes and only
+deep-copies when an explicit snapshot is required. This is exposed via:
 
 ```
-Functional:  let fs2 = Fs.touch fs1 ...   (* fs1 untouched via structural sharing *)
-Imperative:  fs2 := Fs.touch !fs1 ...     (* deep_copy inside touch protects !fs1 *)
+val snapshot : Fs.t -> Fs.t
 ```
+
+`History.commit` uses `Fs.snapshot` internally so commits are stable snapshots.
+Old `Fs.t` values are no longer guaranteed to be immutable unless you call
+`snapshot` yourself.
 
 ---
 

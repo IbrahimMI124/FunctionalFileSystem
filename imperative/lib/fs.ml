@@ -1,11 +1,9 @@
 (* fs.ml — imperative style
-   Key differences from the functional version:
-   - Nodes are mutable records with a Hashtbl for child entries.
-   - The filesystem root is held in a mutable ref inside the opaque type t.
-   - Operations mutate/copy nodes in-place rather than rebuilding paths.
-   - "Snapshot" semantics (needed by History) are achieved by deep-copying
-     the entire tree; this is the imperative equivalent of structural sharing.
-   - Loops replace recursive map traversal where possible.
+  Key differences from the functional version:
+  - Nodes are mutable records with a Hashtbl for child entries.
+  - Operations mutate the tree in-place and return the same [t].
+  - Snapshot semantics are explicit: [snapshot] deep-copies the tree.
+  - Loops replace recursive map traversal where possible.
 *)
 
 (* ------------------------------------------------------------------ *)
@@ -31,9 +29,7 @@ and fs_node =
   | File of file_node
   | Dir  of dir_node
 
-(* The public type t wraps a mutable reference to the root node.
-   This lets us return a new t from each operation (value-level copy)
-   while still being able to mutate things inside when needed. *)
+(* The public type t wraps a mutable reference to the root node. *)
 type t = { mutable root : fs_node } [@@warning "-69"]
 
 (* ------------------------------------------------------------------ *)
@@ -64,7 +60,7 @@ let rec deep_copy_node (node : fs_node) : fs_node =
       Dir d'
 
 (* Deep-copy the whole filesystem, returning a fresh t. *)
-let deep_copy (fs : t) : t = { root = deep_copy_node fs.root }
+let snapshot (fs : t) : t = { root = deep_copy_node fs.root }
 
 (* Assert that a node is a directory and return its dir_node. *)
 let as_dir (node : fs_node) : dir_node =
@@ -98,9 +94,8 @@ let empty : t = { root = Dir (new_dir ()) }
 
 (* mkdir — walk/create intermediate dirs, confirm leaf is a dir. *)
 let mkdir (fs : t) (path : string list) : t =
-  let fs' = deep_copy fs in
   (* Iterative descent using a mutable cursor. *)
-  let cursor = ref fs'.root in
+  let cursor = ref fs.root in
   let remaining = ref path in
   while !remaining <> [] do
     let name = List.hd !remaining in
@@ -113,18 +108,17 @@ let mkdir (fs : t) (path : string list) : t =
          failwith "mkdir: path is a file"
      | None ->
          let new_child = make_empty_dir () in
-         Hashtbl.replace d.entries name new_child;
-         cursor := new_child)
+          Hashtbl.replace d.entries name new_child;
+          cursor := new_child)
   done;
   (* cursor now points at the leaf — must be a directory (it is, by construction) *)
-  fs'
+        fs
 
 (* touch — create or overwrite a file at path. *)
 let touch (fs : t) (path : string list) (content : string) : t =
-  let fs' = deep_copy fs in
   let dir_path, file_name = split_last path in
   (* Navigate to the parent directory. *)
-  let cursor = ref fs'.root in
+  let cursor = ref fs.root in
   List.iter (fun name ->
     let d = as_dir !cursor in
     (match Hashtbl.find_opt d.entries name with
@@ -132,8 +126,8 @@ let touch (fs : t) (path : string list) (content : string) : t =
      | Some (File _) -> failwith "touch: intermediate path is a file"
      | None ->
          let new_child = make_empty_dir () in
-         Hashtbl.replace d.entries name new_child;
-         cursor := new_child)
+          Hashtbl.replace d.entries name new_child;
+          cursor := new_child)
   ) dir_path;
   let parent_d = as_dir !cursor in
   (* Reject touching where a directory already exists. *)
@@ -144,7 +138,7 @@ let touch (fs : t) (path : string list) (content : string) : t =
     File { meta = default_meta (); content }
   in
   Hashtbl.replace parent_d.entries file_name new_file;
-  fs'
+  fs
 
 (* read — returns Some content if path points to a file, None otherwise. *)
 let read (fs : t) (path : string list) : string option =
@@ -154,9 +148,8 @@ let read (fs : t) (path : string list) : string option =
 
 (* delete — remove a named node from its parent directory. *)
 let delete (fs : t) (path : string list) : t =
-  let fs' = deep_copy fs in
   let dir_path, name = split_last path in
-  let cursor = ref fs'.root in
+  let cursor = ref fs.root in
   List.iter (fun seg ->
     let d = as_dir !cursor in
     (match Hashtbl.find_opt d.entries seg with
@@ -167,7 +160,7 @@ let delete (fs : t) (path : string list) : t =
   (match Hashtbl.find_opt parent_d.entries name with
    | None   -> failwith "delete: path not found"
    | Some _ -> Hashtbl.remove parent_d.entries name);
-  fs'
+  fs
 
 (* ls — list names in a directory, sorted alphabetically. *)
 let ls (fs : t) (path : string list) : string list =
@@ -187,11 +180,9 @@ let mv (fs : t) (src : string list) (dst : string list) : t =
     | None   -> failwith "mv: source not found"
     | Some n -> n
   in
-  (* Work on a deep copy so src/dst manipulations don't interfere. *)
-  let fs' = deep_copy fs in
   (* Remove source. *)
   let src_dir_path, src_name = split_last src in
-  let cursor = ref fs'.root in
+  let cursor = ref fs.root in
   List.iter (fun seg ->
     let d = as_dir !cursor in
     cursor := Hashtbl.find d.entries seg
@@ -200,7 +191,7 @@ let mv (fs : t) (src : string list) (dst : string list) : t =
   Hashtbl.remove src_parent.entries src_name;
   (* Insert at destination. *)
   let dst_dir_path, dst_name = split_last dst in
-  let cursor2 = ref fs'.root in
+  let cursor2 = ref fs.root in
   List.iter (fun seg ->
     let d = as_dir !cursor2 in
     (match Hashtbl.find_opt d.entries seg with
@@ -214,9 +205,8 @@ let mv (fs : t) (src : string list) (dst : string list) : t =
   let dst_parent = as_dir !cursor2 in
   if Hashtbl.mem dst_parent.entries dst_name then
     failwith "mv: target exists";
-  (* Use a deep copy of the original src_node so history stays clean. *)
-  Hashtbl.replace dst_parent.entries dst_name (deep_copy_node src_node);
-  fs'
+  Hashtbl.replace dst_parent.entries dst_name src_node;
+  fs
 
 (* cp — like mv but does not remove the source. *)
 let cp (fs : t) (src : string list) (dst : string list) : t =
@@ -225,9 +215,8 @@ let cp (fs : t) (src : string list) (dst : string list) : t =
     | None   -> failwith "cp: source not found"
     | Some n -> n
   in
-  let fs' = deep_copy fs in
   let dst_dir_path, dst_name = split_last dst in
-  let cursor = ref fs'.root in
+  let cursor = ref fs.root in
   List.iter (fun seg ->
     let d = as_dir !cursor in
     (match Hashtbl.find_opt d.entries seg with
@@ -242,4 +231,4 @@ let cp (fs : t) (src : string list) (dst : string list) : t =
   if Hashtbl.mem dst_parent.entries dst_name then
     failwith "cp: target exists";
   Hashtbl.replace dst_parent.entries dst_name (deep_copy_node src_node);
-  fs'
+  fs

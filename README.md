@@ -5,7 +5,8 @@ Two implementations of an in-memory virtual filesystem:
 - Functional: persistent, immutable data structures with structural sharing.
 - Imperative: mutable tree with explicit snapshot isolation.
 
-Both expose the same public API so they can be compared on behavior and style.
+Both expose similar APIs, but the imperative version now mutates in place and
+adds an explicit snapshot function for History commits.
 
 ## Project Layout
 

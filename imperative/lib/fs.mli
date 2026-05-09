@@ -1,9 +1,12 @@
-(* fs.mli — identical public interface to the functional version.
-   Consumers cannot distinguish between the two implementations. *)
+(* fs.mli — imperative interface with in-place mutation.
+   Writes mutate the filesystem directly and return the same [t].
+   Use [snapshot] to capture an isolated copy for History commits. *)
 
 type t
 
 val empty : t
+
+val snapshot : t -> t
 
 val mkdir  : t -> string list -> t
 val touch  : t -> string list -> string -> t

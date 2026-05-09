@@ -17,10 +17,10 @@ let () =
   fs2 := Fs.touch !fs2 [ "a"; "b"; "x.txt" ] "hi";
   assert (Fs.read !fs2 [ "a"; "b"; "x.txt" ] = Some "hi");
 
-  (* overwriting a file: previous snapshot unchanged *)
+  (* overwriting a file: same filesystem updated in-place *)
   let fs3 = ref !fs2 in
   fs3 := Fs.touch !fs3 [ "a"; "b"; "x.txt" ] "bye";
-  assert (Fs.read !fs2 [ "a"; "b"; "x.txt" ] = Some "hi");
+  assert (Fs.read !fs2 [ "a"; "b"; "x.txt" ] = Some "bye");
   assert (Fs.read !fs3 [ "a"; "b"; "x.txt" ] = Some "bye");
 
   (* -- Path helpers -------------------------------------------------- *)
@@ -31,7 +31,7 @@ let () =
 
   (* read on a directory returns None *)
   assert (Fs.read !fs3 [ "a"; "b" ] = None);
-  assert (Fs.read !fs  [ "a"; "b"; "x.txt" ] = None);
+  assert (Fs.read !fs  [ "a"; "b"; "x.txt" ] = Some "bye");
 
   (* -- Error cases --------------------------------------------------- *)
 
@@ -76,13 +76,13 @@ let () =
   let fs8 = ref (Fs.delete !fs7 [ "d"; "a.txt" ]) in
   assert (Fs.read !fs8 [ "d"; "a.txt" ] = None);
 
-  (* -- Persistence stress test: prior snapshots unchanged ------------ *)
+  (* -- In-place behavior: old references see updates ----------------- *)
   let fsp0 = ref Fs.empty in
   let fsp1 = ref (Fs.mkdir !fsp0 [ "p" ]) in
   let fsp2 = ref (Fs.touch !fsp1 [ "p"; "f.txt" ] "v") in
   let fsp3 = ref (Fs.delete !fsp2 [ "p"; "f.txt" ]) in
   assert (Fs.read !fsp1 [ "p"; "f.txt" ] = None);
-  assert (Fs.read !fsp2 [ "p"; "f.txt" ] = Some "v");
+  assert (Fs.read !fsp2 [ "p"; "f.txt" ] = None);
   assert (Fs.read !fsp3 [ "p"; "f.txt" ] = None);
 
   (* -- Deep path: 100 nested directories ----------------------------- *)

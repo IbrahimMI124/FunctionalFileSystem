@@ -1,0 +1,66 @@
+== functional ==
+Entering directory '/home/mohammed-ibrahim/Downloads/Work/Sem 6/PL/FunctionalFileSystem'
+Leaving directory '/home/mohammed-ibrahim/Downloads/Work/Sem 6/PL/FunctionalFileSystem'
+gc_before: live_words=0 heap_words=126976 free_words=126976
+throughput: 0.206873 s
+gc_after_throughput: live_words=343757 heap_words=434176 free_words=89238
+commit_loop: 0.002875 s
+gc_after_commit_loop: live_words=448313 heap_words=661504 free_words=211931
+done
+	Command being timed: "dune exec ./bench_functional.exe"
+	User time (seconds): 0.23
+	System time (seconds): 0.02
+	Percent of CPU this job got: 98%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.25
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 24668
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 6344
+	Voluntary context switches: 28
+	Involuntary context switches: 21
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 24
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+== imperative ==
+Entering directory '/home/mohammed-ibrahim/Downloads/Work/Sem 6/PL/FunctionalFileSystem'
+Leaving directory '/home/mohammed-ibrahim/Downloads/Work/Sem 6/PL/FunctionalFileSystem'
+gc_before: live_words=0 heap_words=126976 free_words=126976
+throughput: 0.198749 s
+gc_after_throughput: live_words=470768 heap_words=574976 free_words=102352
+commit_loop: 7.100586 s
+gc_after_commit_loop: live_words=353533071 heap_words=357150208 free_words=3612738
+done
+	Command being timed: "dune exec ./bench_imperative.exe"
+	User time (seconds): 6.78
+	System time (seconds): 0.81
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:07.62
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 2783968
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 704025
+	Voluntary context switches: 25
+	Involuntary context switches: 202
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 72
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
