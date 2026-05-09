@@ -12,6 +12,7 @@ type commit = {
 
 type history = {
   head : snapshot_id;
+  latest_head : snapshot_id;
   commits : commit IntMap.t;
   next_id : int;
 }
@@ -23,14 +24,16 @@ type repo = {
 
 let init (fs : Fs.t) : repo =
   let c0 = { id = 0; parent = None; fs; message = "init"; time = 0 } in
-  let history = { head = 0; commits = IntMap.add 0 c0 IntMap.empty; next_id = 1 } in
+  let history =
+    { head = 0; latest_head = 0; commits = IntMap.add 0 c0 IntMap.empty; next_id = 1 }
+  in
   { working = fs; history }
 
 let commit (r : repo) (message : string) : repo =
   let id = r.history.next_id in
   let c = { id; parent = Some r.history.head; fs = r.working; message; time = 0 } in
   let commits = IntMap.add id c r.history.commits in
-  let history = { head = id; commits; next_id = id + 1 } in
+  let history = { head = id; latest_head = id; commits; next_id = id + 1 } in
   { r with history }
 
 let checkout (r : repo) (id : snapshot_id) : repo =
@@ -40,6 +43,15 @@ let checkout (r : repo) (id : snapshot_id) : repo =
 
 let latest (r : repo) : Fs.t =
   r.working
+
+let checkout_latest (r : repo) : repo =
+  let id = r.history.latest_head in
+  match IntMap.find_opt id r.history.commits with
+  | None -> r
+  | Some c -> { working = c.fs; history = { r.history with head = id } }
+
+let latest_head (r : repo) : snapshot_id =
+  r.history.latest_head
 
 let log (r : repo) : commit list =
   let rec walk acc current_id =

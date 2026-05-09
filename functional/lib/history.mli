@@ -23,4 +23,8 @@ val checkout : repo -> snapshot_id -> repo
 
 val latest : repo -> Fs.t
 
+val checkout_latest : repo -> repo
+
+val latest_head : repo -> snapshot_id
+
 val log : repo -> commit list
