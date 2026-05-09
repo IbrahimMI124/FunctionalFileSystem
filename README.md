@@ -1,12 +1,12 @@
 # FunctionalFileSystem (OCaml)
 
-Two implementations of an in-memory virtual filesystem:
+This repository contains two implementations of an in-memory filesystem:
 
 - Functional: persistent, immutable data structures with structural sharing.
 - Imperative: mutable tree with explicit snapshot isolation.
 
-Both expose similar APIs, but the imperative version now mutates in place and
-adds an explicit snapshot function for History commits.
+The APIs are aligned, but the imperative version mutates in place and provides
+an explicit snapshot function for History commits.
 
 ## Project Layout
 
@@ -47,18 +47,6 @@ dune test functional/test
 dune test imperative/test
 ```
 
-## Previous Commands (Legacy)
-
-If you used to run commands inside subfolders, here is the new equivalent:
-
-| Old | New (from repo root) |
-|---|---|
-| `cd functional && dune build` | `dune build` |
-| `cd functional && dune exec ./bin/main.exe` | `dune exec functional/bin/main.exe` |
-| `cd functional && dune test` | `dune test functional/test` |
-| `cd imperative && dune build` | `dune build` |
-| `cd imperative && dune exec ./bin/main.exe` | `dune exec imperative/bin/main.exe` |
-| `cd imperative && dune test` | `dune test imperative/test` |
 
 ## Notes
 
